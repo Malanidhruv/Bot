@@ -28,7 +28,7 @@ def display_buy_candidates(signals):
     
     if top_candidates:
         df = pd.DataFrame(top_candidates)
-        df = df[['Name', 'Price', 'Support', 'Strength', 'Distance%', 'RSI', 'Trend']]
+        df = df[['Name', 'Price', 'Resistance', 'Strength', 'Distance%', 'RSI', 'Trend']]
         st.dataframe(df)
     else:
         st.write("No buy candidates found.")
