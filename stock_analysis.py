@@ -134,7 +134,6 @@ def analyze_stock_bearish(alice, token):
             return None
 
         resistance_clusters = cluster_zones(valid_resistances, close_prices)
-
         best_cluster = max(resistance_clusters, key=lambda x: x['count'])
 
         # Ensure bearish EMA crossover and filter oversold conditions
@@ -147,13 +146,14 @@ def analyze_stock_bearish(alice, token):
         return {
             'Token': token,
             'Name': instrument.name.split('-')[0].strip(),
-            'Price': current_price,
+            'Close': current_price,
             'Resistance': best_cluster['price'],
             'Strength': best_cluster['count'],
-            'Distance%': distance_pct,
+            'Distance_pct': distance_pct,
             'RSI': rsi,
             'Trend': 'Bearish'
         }
+  
     except Exception as e:
         print(f"Error analyzing bearish for token {token}: {str(e)}")
         return None
@@ -204,7 +204,6 @@ def analyze_stock_bullish(alice, token):
             return None
 
         support_clusters = cluster_zones(valid_supports, close_prices)
-
         best_cluster = max(support_clusters, key=lambda x: x['count'])
 
         # Ensure bullish EMA crossover and filter overbought conditions
@@ -217,13 +216,14 @@ def analyze_stock_bullish(alice, token):
         return {
             'Token': token,
             'Name': instrument.name.split('-')[0].strip(),
-            'Price': current_price,
+            'Close': current_price,
             'Support': best_cluster['price'],
             'Strength': best_cluster['count'],
-            'Distance%': distance_pct,
+            'Distance_pct': distance_pct,
             'RSI': rsi,
             'Trend': 'Bullish'
         }
+
     except Exception as e:
         print(f"Error analyzing bullish for token {token}: {str(e)}")
         return None
