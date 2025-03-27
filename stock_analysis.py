@@ -6,65 +6,18 @@ from sklearn.preprocessing import MinMaxScaler
 from scipy.signal import argrelextrema
 
 
-def fetch_stock_data_up(alice, token):
-    """Fetch historical data and check if the stock gained 3-5%."""
-    try:
-        instrument = alice.get_instrument_by_token('NSE', token)
-        to_datetime = datetime.now()
-        from_datetime = to_datetime - timedelta(days=5)
-        interval = "D"
-        historical_data = alice.get_historical(instrument, from_datetime, to_datetime, interval)
-        df = pd.DataFrame(historical_data)
+# -------------------- Helper Functions -------------------- #
 
-        if len(df) < 2:
-            return None  # Not enough data
-
-        yesterday_close = df['close'].iloc[-1]
-        day_before_close = df['close'].iloc[-2]
-        pct_change = ((yesterday_close - day_before_close) / day_before_close) * 100
-
-        if 3 <= pct_change <= 5:
-            return {
-                'Name': instrument.name,
-                'Token': token,
-                'Close': yesterday_close,
-                'Change (%)': pct_change
-            }
-    except Exception as e:
-        print(f"Error processing token {token}: {e}")
-    return None
-
-
-def fetch_stock_data_down(alice, token):
-    """Fetch historical data and check if the stock lost 3-5%."""
-    try:
-        instrument = alice.get_instrument_by_token('NSE', token)
-        to_datetime = datetime.now()
-        from_datetime = to_datetime - timedelta(days=5)
-        interval = "D"
-        historical_data = alice.get_historical(instrument, from_datetime, to_datetime, interval)
-        df = pd.DataFrame(historical_data)
-
-        if len(df) < 2:
-            return None  # Not enough data
-
-        yesterday_close = df['close'].iloc[-1]
-        day_before_close = df['close'].iloc[-2]
-        pct_change = ((yesterday_close - day_before_close) / day_before_close) * 100
-
-        if -5 <= pct_change <= -3:
-            return {
-                'Name': instrument.name,
-                'Token': token,
-                'Close': yesterday_close,
-                'Change (%)': pct_change
-            }
-    except Exception as e:
-        print(f"Error processing token {token}: {e}")
-    return None
+def get_historical_data(alice, token, from_date, to_date, interval="D"):
+    """Fetch historical data and return as a DataFrame."""
+    instrument = alice.get_instrument_by_token('NSE', token)
+    historical_data = alice.get_historical(instrument, from_date, to_date, interval)
+    df = pd.DataFrame(historical_data).dropna()
+    return instrument, df
 
 
 def compute_rsi(prices, window=14):
+    """Compute the Relative Strength Index (RSI) for a price series."""
     delta = prices.diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
@@ -73,14 +26,80 @@ def compute_rsi(prices, window=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs)).iloc[-1]
 
-def analyze_stock(alice, token):
-    """Analyze stock for bearish signals using resistance, EMA, and RSI."""
-    try:
-        instrument = alice.get_instrument_by_token('NSE', token)
-        from_date = datetime.now() - timedelta(days=730)
-        historical_data = alice.get_historical(instrument, from_date, datetime.now(), "D")
-        df = pd.DataFrame(historical_data).dropna()
 
+def cluster_zones(zones, prices, tolerance_factor=0.3):
+    """Group support or resistance zones based on price proximity."""
+    clusters = []
+    tolerance = np.std(prices) * tolerance_factor
+    for zone in zones:
+        found = False
+        for cluster in clusters:
+            if abs(zone['price'] - cluster['price']) <= tolerance:
+                cluster['count'] += 1
+                cluster['dates'].append(zone['date'])
+                found = True
+                break
+        if not found:
+            clusters.append({
+                'price': zone['price'],
+                'count': 1,
+                'dates': [zone['date']]
+            })
+    return clusters
+
+
+# -------------------- Price Change Functions -------------------- #
+
+def fetch_stock_data_change(alice, token, direction="up"):
+    """
+    Fetch historical data and check if the stock's change is within the target range.
+    For 'up', checks for a 3-5% gain.
+    For 'down', checks for a -5 to -3% loss.
+    """
+    try:
+        instrument, df = get_historical_data(
+            alice, token, datetime.now() - timedelta(days=5), datetime.now(), interval="D"
+        )
+        if len(df) < 2:
+            return None  # Not enough data
+
+        yesterday_close = df['close'].iloc[-1]
+        day_before_close = df['close'].iloc[-2]
+        pct_change = ((yesterday_close - day_before_close) / day_before_close) * 100
+
+        if direction == "up" and 3 <= pct_change <= 5:
+            return {
+                'Name': instrument.name,
+                'Token': token,
+                'Close': yesterday_close,
+                'Change (%)': pct_change
+            }
+        elif direction == "down" and -5 <= pct_change <= -3:
+            return {
+                'Name': instrument.name,
+                'Token': token,
+                'Close': yesterday_close,
+                'Change (%)': pct_change
+            }
+    except Exception as e:
+        print(f"Error processing token {token}: {e}")
+    return None
+
+
+# -------------------- Analysis Functions -------------------- #
+
+def analyze_stock_bearish(alice, token):
+    """
+    Analyze stock for bearish signals using resistance zones, EMA crossover, and RSI filter.
+    Logic:
+      - Resistance zones are determined via local maximum analysis.
+      - Current price must be 5-20% below a recent resistance and with sufficient volume.
+      - Requires bearish EMA crossover (50 EMA < 200 EMA) and RSI not oversold.
+    """
+    try:
+        instrument, df = get_historical_data(
+            alice, token, datetime.now() - timedelta(days=730), datetime.now(), "D"
+        )
         if len(df) < 100:
             return None
 
@@ -97,11 +116,11 @@ def analyze_stock(alice, token):
 
         valid_resistances = []
         for m in local_max:
-            if m < len(df) - 126:  # Older than 6 months
+            # Only consider recent resistance points (within last 6 months)
+            if m < len(df) - 126:
                 continue
             resistance_price = close_prices[m]
             current_price = close_prices[-1]
-
             # Check if current price is 5-20% below resistance
             if 0.80 <= (current_price / resistance_price) <= 0.95:
                 if df['volume'].iloc[-1] > df['volume'].iloc[m] * 0.8:
@@ -114,33 +133,12 @@ def analyze_stock(alice, token):
         if not valid_resistances:
             return None
 
-        resistance_clusters = []
-        tolerance = np.std(close_prices) * 0.3
-        for res in valid_resistances:
-            found = False
-            for cluster in resistance_clusters:
-                if abs(res['price'] - cluster['price']) <= tolerance:
-                    cluster['count'] += 1
-                    found = True
-                    break
-            if not found:
-                resistance_clusters.append({
-                    'price': res['price'],
-                    'count': 1,
-                    'dates': [res['date']]
-                })
-
-        if not resistance_clusters:
-            return None
+        resistance_clusters = cluster_zones(valid_resistances, close_prices)
 
         best_cluster = max(resistance_clusters, key=lambda x: x['count'])
 
-        # Require bearish EMA crossover
-        if df['50_EMA'].iloc[-1] > df['200_EMA'].iloc[-1]:
-            return None
-
-        # Filter out oversold conditions
-        if rsi < 35:
+        # Ensure bearish EMA crossover and filter oversold conditions
+        if df['50_EMA'].iloc[-1] > df['200_EMA'].iloc[-1] or rsi < 35:
             return None
 
         current_price = close_prices[-1]
@@ -154,17 +152,102 @@ def analyze_stock(alice, token):
             'Strength': best_cluster['count'],
             'Distance%': distance_pct,
             'RSI': rsi,
-            'Trend': 'Bearish' if df['50_EMA'].iloc[-1] < df['200_EMA'].iloc[-1] else 'Bullish'
+            'Trend': 'Bearish'
         }
     except Exception as e:
-        print(f"Error analyzing {token}: {str(e)}")
+        print(f"Error analyzing bearish for token {token}: {str(e)}")
         return None
 
-def analyze_all_tokens(alice, tokens):
-    """Analyze all tokens and collect bearish signals."""
+
+def analyze_stock_bullish(alice, token):
+    """
+    Analyze stock for bullish signals using support zones, EMA crossover, and RSI filter.
+    Logic:
+      - Support zones are determined via local minimum analysis.
+      - Current price must be 5-20% above a recent support and with sufficient volume.
+      - Requires bullish EMA crossover (50 EMA > 200 EMA) and RSI not overbought.
+    """
+    try:
+        instrument, df = get_historical_data(
+            alice, token, datetime.now() - timedelta(days=730), datetime.now(), "D"
+        )
+        if len(df) < 100:
+            return None
+
+        df['50_EMA'] = df['close'].ewm(span=50).mean()
+        df['200_EMA'] = df['close'].ewm(span=200).mean()
+        rsi = compute_rsi(df['close'])
+
+        close_prices = df['close'].values
+        scaler = MinMaxScaler()
+        normalized_prices = scaler.fit_transform(close_prices.reshape(-1, 1)).flatten()
+
+        window_size = max(int(len(df) * 0.05), 5)
+        local_min = argrelextrema(normalized_prices, np.less_equal, order=window_size)[0]
+
+        valid_supports = []
+        for m in local_min:
+            if m < len(df) - 126:
+                continue
+            support_price = close_prices[m]
+            current_price = close_prices[-1]
+            # Check if current price is 5-20% above support
+            if 1.05 <= (current_price / support_price) <= 1.20:
+                if df['volume'].iloc[-1] > df['volume'].iloc[m] * 0.8:
+                    valid_supports.append({
+                        'price': support_price,
+                        'date': df.index[m],
+                        'touches': 1
+                    })
+
+        if not valid_supports:
+            return None
+
+        support_clusters = cluster_zones(valid_supports, close_prices)
+
+        best_cluster = max(support_clusters, key=lambda x: x['count'])
+
+        # Ensure bullish EMA crossover and filter overbought conditions
+        if df['50_EMA'].iloc[-1] < df['200_EMA'].iloc[-1] or rsi > 65:
+            return None
+
+        current_price = close_prices[-1]
+        distance_pct = (current_price / best_cluster['price'] - 1) * 100
+
+        return {
+            'Token': token,
+            'Name': instrument.name.split('-')[0].strip(),
+            'Price': current_price,
+            'Support': best_cluster['price'],
+            'Strength': best_cluster['count'],
+            'Distance%': distance_pct,
+            'RSI': rsi,
+            'Trend': 'Bullish'
+        }
+    except Exception as e:
+        print(f"Error analyzing bullish for token {token}: {str(e)}")
+        return None
+
+
+# -------------------- Batch Analysis Functions -------------------- #
+
+def analyze_all_tokens_bearish(alice, tokens):
+    """Analyze all tokens for bearish signals."""
     signals = []
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(analyze_stock, alice, token): token for token in tokens}
+        futures = {executor.submit(analyze_stock_bearish, alice, token): token for token in tokens}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                signals.append(result)
+    return signals
+
+
+def analyze_all_tokens_bullish(alice, tokens):
+    """Analyze all tokens for bullish signals."""
+    signals = []
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(analyze_stock_bullish, alice, token): token for token in tokens}
         for future in as_completed(futures):
             result = future.result()
             if result:
