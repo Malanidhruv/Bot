@@ -73,9 +73,8 @@ def compute_rsi(prices, window=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs)).iloc[-1]
 
-
 def analyze_stock(alice, token):
-    """Analyze stock based on EMA, RSI, and local support zones."""
+    """Analyze stock for bearish signals using resistance, EMA, and RSI."""
     try:
         instrument = alice.get_instrument_by_token('NSE', token)
         from_date = datetime.now() - timedelta(days=730)
@@ -94,51 +93,54 @@ def analyze_stock(alice, token):
         normalized_prices = scaler.fit_transform(close_prices.reshape(-1, 1)).flatten()
 
         window_size = max(int(len(df) * 0.05), 5)
-        local_min = argrelextrema(normalized_prices, np.less_equal, order=window_size)[0]
+        local_max = argrelextrema(normalized_prices, np.greater_equal, order=window_size)[0]
 
-        valid_supports = []
-        for m in local_min:
+        valid_resistances = []
+        for m in local_max:
             if m < len(df) - 126:  # Older than 6 months
                 continue
-            support_price = close_prices[m]
+            resistance_price = close_prices[m]
             current_price = close_prices[-1]
 
-            if 1.05 <= (current_price / support_price) <= 1.20:
+            # Check if current price is 5-20% below resistance
+            if 0.80 <= (current_price / resistance_price) <= 0.95:
                 if df['volume'].iloc[-1] > df['volume'].iloc[m] * 0.8:
-                    valid_supports.append({
-                        'price': support_price,
+                    valid_resistances.append({
+                        'price': resistance_price,
                         'date': df.index[m],
                         'touches': 1
                     })
 
-        if not valid_supports:
+        if not valid_resistances:
             return None
 
-        support_clusters = []
+        resistance_clusters = []
         tolerance = np.std(close_prices) * 0.3
-        for sup in valid_supports:
+        for res in valid_resistances:
             found = False
-            for cluster in support_clusters:
-                if abs(sup['price'] - cluster['price']) <= tolerance:
+            for cluster in resistance_clusters:
+                if abs(res['price'] - cluster['price']) <= tolerance:
                     cluster['count'] += 1
                     found = True
                     break
             if not found:
-                support_clusters.append({
-                    'price': sup['price'],
+                resistance_clusters.append({
+                    'price': res['price'],
                     'count': 1,
-                    'dates': [sup['date']]
+                    'dates': [res['date']]
                 })
 
-        if not support_clusters:
+        if not resistance_clusters:
             return None
 
-        best_cluster = max(support_clusters, key=lambda x: x['count'])
+        best_cluster = max(resistance_clusters, key=lambda x: x['count'])
 
-        if df['50_EMA'].iloc[-1] < df['200_EMA'].iloc[-1]:
+        # Require bearish EMA crossover
+        if df['50_EMA'].iloc[-1] > df['200_EMA'].iloc[-1]:
             return None
 
-        if rsi > 65:
+        # Filter out oversold conditions
+        if rsi < 35:
             return None
 
         current_price = close_prices[-1]
@@ -148,19 +150,18 @@ def analyze_stock(alice, token):
             'Token': token,
             'Name': instrument.name.split('-')[0].strip(),
             'Price': current_price,
-            'Support': best_cluster['price'],
+            'Resistance': best_cluster['price'],
             'Strength': best_cluster['count'],
             'Distance%': distance_pct,
             'RSI': rsi,
-            'Trend': 'Bullish' if df['50_EMA'].iloc[-1] > df['200_EMA'].iloc[-1] else 'Bearish'
+            'Trend': 'Bearish' if df['50_EMA'].iloc[-1] < df['200_EMA'].iloc[-1] else 'Bullish'
         }
     except Exception as e:
         print(f"Error analyzing {token}: {str(e)}")
         return None
 
-
 def analyze_all_tokens(alice, tokens):
-    """Analyze all tokens and collect buy signals."""
+    """Analyze all tokens and collect bearish signals."""
     signals = []
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(analyze_stock, alice, token): token for token in tokens}
