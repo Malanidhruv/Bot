@@ -111,9 +111,9 @@ if st.button("Start Screening"):
             if top_candidates:
                 df = pd.DataFrame(top_candidates)
                 df["Price"] = df["Price"].astype(float).round(2)
-                df["Support"] = df["Support"].astype(float).round(2)
+                df["Resistance"] = df["Resistance"].astype(float).round(2)
                 df["Distance%"] = df["Distance%"].astype(float).round(2)
                 df["RSI"] = df["RSI"].astype(float).round(2)
-                safe_display(df, "Top Buy Candidates")
+                safe_display(df, "Top Sell Candidates")
             else:
                 st.warning("No stocks found for EMA, RSI & Support Zone strategy.")
