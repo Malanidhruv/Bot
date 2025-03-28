@@ -5,9 +5,8 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from scipy.signal import argrelextrema
 
-
 def fetch_stock_data_up(alice, token):
-    """Fetch historical data and check if the stock gained 3-5%."""
+    """Fetch historical data and check if the stock gained 3% or more."""
     try:
         instrument = alice.get_instrument_by_token('NSE', token)
         to_datetime = datetime.now()
@@ -23,7 +22,7 @@ def fetch_stock_data_up(alice, token):
         day_before_close = df['close'].iloc[-2]
         pct_change = ((yesterday_close - day_before_close) / day_before_close) * 100
 
-        if 3 <= pct_change <= 5:
+        if pct_change >= 3:  # 3% or more increase
             return {
                 'Name': instrument.name,
                 'Token': token,
@@ -36,7 +35,7 @@ def fetch_stock_data_up(alice, token):
 
 
 def fetch_stock_data_down(alice, token):
-    """Fetch historical data and check if the stock lost 3-5%."""
+    """Fetch historical data and check if the stock lost 3% or more."""
     try:
         instrument = alice.get_instrument_by_token('NSE', token)
         to_datetime = datetime.now()
@@ -52,7 +51,7 @@ def fetch_stock_data_down(alice, token):
         day_before_close = df['close'].iloc[-2]
         pct_change = ((yesterday_close - day_before_close) / day_before_close) * 100
 
-        if -5 <= pct_change <= -3:
+        if pct_change <= -3:  # 3% or more decrease
             return {
                 'Name': instrument.name,
                 'Token': token,
@@ -62,6 +61,7 @@ def fetch_stock_data_down(alice, token):
     except Exception as e:
         print(f"Error processing token {token}: {e}")
     return None
+
 
 
 def compute_rsi(prices, window=14):
