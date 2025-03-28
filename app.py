@@ -38,13 +38,13 @@ def fetch_screened_stocks(tokens, strategy):
         if not alice:
             raise Exception("AliceBlue API is not initialized.")
         
-        if strategy == "3-5% Gainers":
+        if strategy == "Gainers":
             with ThreadPoolExecutor(max_workers=10) as executor:
                 futures = {executor.submit(fetch_stock_data_change, alice, token, "up"): token for token in tokens}
                 results = [future.result() for future in as_completed(futures)]
             return [res for res in results if res is not None]
 
-        elif strategy == "3-5% Losers":
+        elif strategy == "Losers":
             with ThreadPoolExecutor(max_workers=10) as executor:
                 futures = {executor.submit(fetch_stock_data_change, alice, token, "down"): token for token in tokens}
                 results = [future.result() for future in as_completed(futures)]
@@ -65,7 +65,7 @@ def clean_and_display_data(data, strategy):
     if not data or not isinstance(data, list):
         return pd.DataFrame()
 
-    if strategy in ["3-5% Gainers", "3-5% Losers"]:
+    if strategy in ["Gainers", "Losers"]:
         df = pd.DataFrame(data)
         df["Close"] = df["Close"].astype(float).round(2)
         df["Change (%)"] = df["Change (%)"].astype(float).round(2)
@@ -105,8 +105,8 @@ selected_list = st.selectbox("Select Stock List:", list(STOCK_LISTS.keys()))
 strategy = st.selectbox(
     "Select Strategy:", 
     [
-        "3-5% Gainers", 
-        "3-5% Losers", 
+        "Gainers", 
+        "Losers", 
         "EMA, RSI & Support Zone (Buy)",
         "EMA, RSI & Resistance Zone (Sell)"
     ]
