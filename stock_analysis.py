@@ -67,14 +67,14 @@ def fetch_stock_data_change(alice, token, direction="up"):
         day_before_close = df['close'].iloc[-2]
         pct_change = ((yesterday_close - day_before_close) / day_before_close) * 100
 
-        if direction == "up" and 3 <= pct_change <= 20:
+        if direction == "up" and 3 <= pct_change <= 5:
             return {
                 'Name': instrument.name,
                 'Token': token,
                 'Close': yesterday_close,
                 'Change (%)': pct_change
             }
-        elif direction == "down" and -20 <= pct_change <= -3:
+        elif direction == "down" and -5 <= pct_change <= -3:
             return {
                 'Name': instrument.name,
                 'Token': token,
