@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from alice_client import initialize_alice, save_credentials, load_credentials
-from stock_analysis import (
+from analysis.stock_analysis import (
     analyze_all_tokens_bullish,
     analyze_all_tokens_bearish,
     fetch_stock_data_change
