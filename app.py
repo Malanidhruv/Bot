@@ -69,18 +69,31 @@ def clean_and_display_data(data, strategy):
         df = pd.DataFrame(data)
         df["Close"] = df["Close"].astype(float).round(2)
         df["Change (%)"] = df["Change (%)"].astype(float).round(2)
+        
+        # Sort by Change (%) in descending order
+        df = df.sort_values(by="Change (%)", ascending=False)
+        
     elif strategy == "EMA, RSI & Support Zone (Buy)":
         df = pd.DataFrame(data)
         df["Close"] = df["Close"].astype(float).round(2)
         df["Support"] = df["Support"].astype(float).round(2)
         df["Distance_pct"] = df["Distance_pct"].astype(float).round(2)
         df["RSI"] = df["RSI"].astype(float).round(2)
+
+        # Sort by Strength if available
+        if "Strength" in df.columns:
+            df = df.sort_values(by="Strength", ascending=False)
+        
     elif strategy == "EMA, RSI & Resistance Zone (Sell)":
         df = pd.DataFrame(data)
         df["Close"] = df["Close"].astype(float).round(2)
         df["Resistance"] = df["Resistance"].astype(float).round(2)
         df["Distance_pct"] = df["Distance_pct"].astype(float).round(2)
         df["RSI"] = df["RSI"].astype(float).round(2)
+
+        # Sort by Strength if available
+        if "Strength" in df.columns:
+            df = df.sort_values(by="Strength", ascending=False)
     
     return df
 
