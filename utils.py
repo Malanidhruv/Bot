@@ -7,8 +7,8 @@ def generate_tradingview_link(stock_name):
 
 def print_stocks_up(stocks):
     """Prints the stocks that gained 3-5% in descending order with TradingView links."""
-    stocks_sorted = sorted(stocks, key=lambda x: -x['Change (%)'])  # Sort by highest Change% first
-    
+    stocks_sorted = sorted(stocks, key=lambda x: -float(x['Change (%)']))  # Convert Change% to float
+
     print("\nStocks that were 3-5% up yesterday:")
     print(f"{'Name':<20} {'Token':<10} {'Close':<10} {'Change (%)':<10}")
     print('-' * 50)
@@ -21,7 +21,8 @@ def print_stocks_up(stocks):
 
 def print_stocks_down(stocks):
     """Prints the stocks that lost 3-5% in descending order with TradingView links."""
-    stocks_sorted = sorted(stocks, key=lambda x: x['Change (%)'])  # Sort by lowest Change% first (biggest drop on top)
+    stocks_sorted = sorted(stocks, key=lambda x: float(x['Change (%)']))  # Convert Change% to float
+
     
     print("\nStocks that were 3-5% down yesterday:")
     print(f"{'Name':<20} {'Token':<10} {'Close':<10} {'Change (%)':<10}")
@@ -43,6 +44,7 @@ def display_buy_candidates(signals):
     
     # Corrected sorting order: Strength (highest first), then Distance% (lowest first)
     sorted_signals = sorted(signals, key=lambda x: (-x['Strength'], x['Distance_pct']))
+    
     top_candidates = sorted_signals[:10]
     
     df = pd.DataFrame(top_candidates)
