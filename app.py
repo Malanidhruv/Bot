@@ -92,14 +92,32 @@ def clean_and_display_data(data, strategy):
 
 
 def safe_display(df, title):
+    """Displays the stock data with clickable TradingView links."""
     if df.empty:
         st.warning(f"No stocks found for {title}")
     else:
         st.markdown(f"## {title}")
-        st.dataframe(df)
+        
+        # Convert 'Name' column into clickable TradingView links
+        if "Name" in df.columns:
+            df["Name"] = df["Name"].apply(lambda x: f'<a href="https://in.tradingview.com/chart?symbol=NSE%3A{x}" target="_blank">{x}</a>')
+        
+        # Render the DataFrame with clickable links
+        st.markdown(df.to_html(escape=False), unsafe_allow_html=True)
 
 
 st.title("Stock Screener")
+
+# Apply custom CSS to adjust column width
+st.markdown("""
+    <style>
+        table { width: 100% !important; }
+        th, td { padding: 10px !important; text-align: left !important; }
+        td:nth-child(1) { min-width: 200px !important; }  /* Adjust first column width */
+        a { white-space: nowrap; }  /* Ensures links stay on one line */
+    </style>
+""", unsafe_allow_html=True)
+
 
 selected_list = st.selectbox("Select Stock List:", list(STOCK_LISTS.keys()))
 strategy = st.selectbox(
