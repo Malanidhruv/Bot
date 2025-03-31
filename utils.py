@@ -6,24 +6,28 @@ def generate_tradingview_link(stock_name):
     return f'<a href="https://in.tradingview.com/chart?symbol=NSE%3A{stock_name}" target="_blank">{stock_name}</a>'
 
 def print_stocks_up(stocks):
-    """Prints the stocks that gained 3-5% with TradingView links."""
+    """Prints the stocks that gained 3-5% in descending order with TradingView links."""
+    stocks_sorted = sorted(stocks, key=lambda x: -x['Change (%)'])  # Sort by highest Change% first
+    
     print("\nStocks that were 3-5% up yesterday:")
     print(f"{'Name':<20} {'Token':<10} {'Close':<10} {'Change (%)':<10}")
     print('-' * 50)
     
-    for stock in stocks:
+    for stock in stocks_sorted:
         link = f"https://in.tradingview.com/chart?symbol=NSE%3A{stock['Name']}"
         print(f"{stock['Name']:<20} {stock['Token']:<10} {stock['Close']:<10.2f} {stock['Change (%)']:<10.2f}  {link}")
     
     print('-' * 50)
 
 def print_stocks_down(stocks):
-    """Prints the stocks that lost 3-5% with TradingView links."""
+    """Prints the stocks that lost 3-5% in descending order with TradingView links."""
+    stocks_sorted = sorted(stocks, key=lambda x: x['Change (%)'])  # Sort by lowest Change% first (biggest drop on top)
+    
     print("\nStocks that were 3-5% down yesterday:")
     print(f"{'Name':<20} {'Token':<10} {'Close':<10} {'Change (%)':<10}")
     print('-' * 50)
     
-    for stock in stocks:
+    for stock in stocks_sorted:
         link = f"https://in.tradingview.com/chart?symbol=NSE%3A{stock['Name']}"
         print(f"{stock['Name']:<20} {stock['Token']:<10} {stock['Close']:<10.2f} {stock['Change (%)']:<10.2f}  {link}")
     
@@ -37,7 +41,7 @@ def display_buy_candidates(signals):
         st.warning("No buy candidates found.")
         return
     
-    # Sort by Strength (highest first), then by Distance% (lowest first)
+    # Corrected sorting order: Strength (highest first), then Distance% (lowest first)
     sorted_signals = sorted(signals, key=lambda x: (-x['Strength'], x['Distance_pct']))
     top_candidates = sorted_signals[:10]
     
@@ -60,7 +64,7 @@ def display_sell_candidates(signals):
         st.warning("No sell candidates found.")
         return
     
-    # Sort by Strength (highest first), then by Distance% (lowest first)
+    # Corrected sorting order: Strength (highest first), then Distance% (lowest first)
     sorted_signals = sorted(signals, key=lambda x: (-x['Strength'], x['Distance_pct']))
     top_candidates = sorted_signals[:10]
     
