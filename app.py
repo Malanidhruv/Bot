@@ -71,22 +71,16 @@ def clean_and_display_data(data, strategy):
         df["Change (%)"] = df["Change (%)"].astype(float).round(2)
     elif strategy == "EMA, RSI & Support Zone (Buy)":
         df = pd.DataFrame(data)
-        # Expected columns: Name, Close, Support, Strength, Distance_pct, RSI, Trend
         df["Close"] = df["Close"].astype(float).round(2)
         df["Support"] = df["Support"].astype(float).round(2)
         df["Distance_pct"] = df["Distance_pct"].astype(float).round(2)
         df["RSI"] = df["RSI"].astype(float).round(2)
     elif strategy == "EMA, RSI & Resistance Zone (Sell)":
         df = pd.DataFrame(data)
-        # Expected columns: Name, Close, Resistance, Strength, Distance_pct, RSI, Trend
         df["Close"] = df["Close"].astype(float).round(2)
         df["Resistance"] = df["Resistance"].astype(float).round(2)
         df["Distance_pct"] = df["Distance_pct"].astype(float).round(2)
         df["RSI"] = df["RSI"].astype(float).round(2)
-    
-    search = st.text_input("Search Stocks:", "").upper()
-    if search and "Name" in df.columns:
-        df = df[df["Name"].str.contains(search, na=False, regex=False)]
     
     return df
 
@@ -117,7 +111,6 @@ st.markdown("""
         a { white-space: nowrap; }  /* Ensures links stay on one line */
     </style>
 """, unsafe_allow_html=True)
-
 
 selected_list = st.selectbox("Select Stock List:", list(STOCK_LISTS.keys()))
 strategy = st.selectbox(
