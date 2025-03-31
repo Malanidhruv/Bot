@@ -69,9 +69,7 @@ def clean_and_display_data(data, strategy):
         df = pd.DataFrame(data)
         df["Close"] = df["Close"].astype(float).round(2)
         df["Change (%)"] = df["Change (%)"].astype(float).round(2)
-        
-        # Sort by Change (%) in descending order
-        df = df.sort_values(by="Change (%)", ascending=False)
+    
         
     elif strategy == "EMA, RSI & Support Zone (Buy)":
         df = pd.DataFrame(data)
