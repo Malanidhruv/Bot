@@ -16,7 +16,7 @@ def get_historical_data(alice, token, from_date, to_date, interval="D"):
     return instrument, df
 
 
-def compute_rsi(prices, window=14):
+def compute_rsi(prices, window=9):
     """Compute the Relative Strength Index (RSI) for a price series."""
     delta = prices.diff()
     gain = delta.where(delta > 0, 0)
