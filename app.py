@@ -10,7 +10,7 @@ from analysis.stock_analysis import (
 )
 from stock_lists import STOCK_LISTS
 
-st.set_page_config(page_title="Stock Screener", layout="wide")
+st.set_page_config(page_title="Arihant Capital Stock Screener", layout="wide")
 st.warning("This screener is based on statistical analysis. Please conduct your own due diligence before making any trading decisions. This application is best compatible with **Google Chrome**.")
 
 # Try loading stored credentials
