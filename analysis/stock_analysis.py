@@ -235,7 +235,7 @@ def analyze_stock_bullish(alice, token):
 def analyze_all_tokens_bearish(alice, tokens):
     """Analyze all tokens for bearish signals."""
     signals = []
-    with ThreadPoolExecutor(max_workers=100) as executor:
+    with ThreadPoolExecutor(max_workers=300) as executor:
         futures = {executor.submit(analyze_stock_bearish, alice, token): token for token in tokens}
         for future in as_completed(futures):
             result = future.result()
@@ -247,7 +247,7 @@ def analyze_all_tokens_bearish(alice, tokens):
 def analyze_all_tokens_bullish(alice, tokens):
     """Analyze all tokens for bullish signals."""
     signals = []
-    with ThreadPoolExecutor(max_workers=100) as executor:
+    with ThreadPoolExecutor(max_workers=300) as executor:
         futures = {executor.submit(analyze_stock_bullish, alice, token): token for token in tokens}
         for future in as_completed(futures):
             result = future.result()
